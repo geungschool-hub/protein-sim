@@ -421,6 +421,10 @@ table.ctab td{padding:0;}
 .rdrow select{font:inherit;font-size:16px;min-height:44px;padding:4px 8px;border:1.5px solid #B9C2CC;border-radius:8px;background:#fff;}
 .rdrow .rdmark{font-size:18px;min-width:24px;}
 .qaid{margin:0 0 8px;}
+/* 끌어 놓기 */
+.chip,.tcard{touch-action:none;user-select:none;-webkit-user-select:none;}
+.dragghost{position:fixed;left:0;top:0;z-index:60;pointer-events:none;transform:translate(-50%,-70%);background:var(--ribo);color:#fff;font-weight:800;font-size:16px;padding:8px 14px;border-radius:999px;box-shadow:0 6px 16px rgba(0,0,0,.25);}
+.dragghost.card{background:var(--trna);font-family:'Consolas','Menlo',monospace;border-radius:10px;}
 </style>
 </head>
 <body>
@@ -462,7 +466,7 @@ table.ctab td{padding:0;}
       </div>
       <div class="pane-r">
         <div class="pr-do">
-          <div class="taskbar">아래 이름을 하나 누른 다음, 그림에서 알맞은 빈칸(㉠~㉥)을 누르시오.</div>
+          <div class="taskbar">아래 이름표를 그림의 알맞은 빈칸(㉠~㉥)으로 끌어 놓으시오. (이름표를 누른 뒤 빈칸을 눌러도 된다)</div>
           <div class="chiprow" id="partChips"></div>
           <div id="partsVerdict"></div>
           <div class="msg hide" id="fb_parts"></div>
@@ -883,7 +887,7 @@ function riboSvg(pX, mode, slotTap){
     s += txt('', L + W + 6, RG.yM - 56, '대단위체', 12.5, C_RIBO_INK, 'start', 800);   /* ★자리 이름(A 자리)과 겹치지 않게 바깥 오른쪽 */
     ['E', 'P', 'A'].forEach(function(k, j){
       var cx = pX + (j - 1) * w3 + (w3 - 4) / 2;
-      s += '<g' + (slotTap ? ' class="slotpick" onclick="' + slotTap + '(&#39;' + k + '&#39;)"' : '') + '>';
+      s += '<g' + (slotTap ? ' class="slotpick" data-drop="site:' + k + '" onclick="' + slotTap + '(&#39;' + k + '&#39;)"' : '') + '>';
       s += '<rect x="' + (cx - (w3 - 10) / 2) + '" y="' + (RG.yM - 72) + '" width="' + (w3 - 10) + '" height="70" rx="10" fill="#fff" fill-opacity=".35" stroke="' + C_RIBO + '" stroke-width="1.6" stroke-dasharray="5,4"/>';
       s += txt('', cx, RG.yM - 80, k + ' 자리', 13, C_RIBO_INK, 'middle', 800);
       s += '</g>';
@@ -927,6 +931,74 @@ var PART_SLOTS = {
   f:{ mark:'㉥', name:'아미노산 결합 자리',  x:530, y:30  }
 };
 var PART_CHIPS = ['소단위체', '안티코돈', 'A 자리', '대단위체', '아미노산 결합 자리', 'P 자리'];
+
+/* ══ 끌어 놓기 — ① 이름표 · ③ tRNA 카드 (2026-10-14 교사: 「드래그 기능 넣어 줘」) ══
+   ★누르기로 놓기(고르고 → 자리 누르기)도 그대로 된다 — 끌기가 안 되는 기기를 위해서다.
+   ★포인터 이벤트 하나로 마우스·손가락을 함께 받는다. 8px 넘게 움직여야 「끌기」로 본다(그 밖은 누르기).
+   ★놓을 자리는 data-drop="part:a" · "site:P" 로 표시한다. 손가락 밑 요소에서 위로 올라가며 찾는다. */
+var drag = null, dragClicked = '';
+function dragAttrs(kind, val){
+  var a = '&#39;' + kind + '&#39;, &#39;' + val + '&#39;';
+  return ' onpointerdown="dragDown(event, ' + a + ')" onpointermove="dragMove(event)" onpointerup="dragUp(event)" onpointercancel="dragCancel()"';
+}
+function dragDown(ev, kind, val){
+  if (ev.button !== undefined && ev.button !== 0) return;
+  var t = ev.currentTarget;
+  if (t && t.disabled) return;
+  dragClicked = '';   /* ★새로 누를 때마다 지운다 — 끌기 뒤 click 이 안 오면(버튼이 다시 그려지면) 다음 누르기가 먹혔다 */
+  drag = { kind:kind, val:val, x0:ev.clientX, y0:ev.clientY, moved:false, ghost:null };
+  try { if (t && t.setPointerCapture) t.setPointerCapture(ev.pointerId); } catch (e) {}
+}
+function dragMove(ev){
+  if (!drag) return;
+  var dx = ev.clientX - drag.x0, dy = ev.clientY - drag.y0;
+  if (!drag.moved){
+    if (dx * dx + dy * dy < 64) return;
+    drag.moved = true;
+    var g = document.createElement('div');
+    g.className = 'dragghost' + (drag.kind === 'card' ? ' card' : '');
+    g.textContent = (drag.kind === 'card') ? acStr(cardById(drag.val).ac) : drag.val;
+    if (document.body) document.body.appendChild(g);
+    drag.ghost = g;
+  }
+  if (drag.ghost){ drag.ghost.style.left = ev.clientX + 'px'; drag.ghost.style.top = ev.clientY + 'px'; }
+  if (ev.preventDefault) ev.preventDefault();
+}
+function dropTargetAt(x, y){
+  var el = (document.elementFromPoint ? document.elementFromPoint(x, y) : null), n = 0;
+  while (el && n++ < 8){
+    var d = el.getAttribute ? el.getAttribute('data-drop') : null;
+    if (d) return d;
+    el = el.parentNode;
+  }
+  return '';
+}
+function dragUp(ev){
+  if (!drag) return;
+  var d = drag; drag = null;
+  if (d.ghost && d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
+  if (!d.moved) return;                    /* 누르기 — onclick(dragClick)이 맡는다 */
+  dragClicked = d.kind + ':' + d.val;      /* 끌고 난 뒤 따라오는 click 은 한 번 버린다 */
+  var tgt = dropTargetAt(ev.clientX, ev.clientY);
+  if (d.kind === 'part'){
+    ptSel = d.val;
+    if (tgt.indexOf('part:') === 0) dropPart(tgt.slice(5));
+    else { ptSel = ''; renderParts(); }
+  } else if (d.kind === 'card'){
+    trSel = d.val;
+    if (tgt.indexOf('site:') === 0) dropSite(tgt.slice(5));
+    else { trSel = ''; renderTrans(); }
+  }
+}
+function dragCancel(){
+  if (drag && drag.ghost && drag.ghost.parentNode) drag.ghost.parentNode.removeChild(drag.ghost);
+  drag = null;
+}
+function dragClick(kind, val){
+  if (dragClicked === kind + ':' + val){ dragClicked = ''; return; }
+  dragClicked = '';
+  if (kind === 'part') pickPart(val); else trPick(val);
+}
 var ptSel = '';   /* 고른 이름(화면에만) */
 function ptStageSvg(){
   var s = '';
@@ -941,20 +1013,26 @@ function ptStageSvg(){
     s += '<rect x="' + x + '" y="104" width="68" height="70" rx="10" fill="#fff" fill-opacity=".55" stroke="' + C_RIBO + '" stroke-width="1.6" stroke-dasharray="5,4"/>';
     if (k === 'E') s += txt('', x + 34, 140, 'E 자리', 13, C_RIBO_INK, 'middle', 800);
   });
-  /* tRNA — 위가 3′ 말단(아미노산 결합 자리), 아래 고리에 안티코돈 */
-  s += '<line x1="600" y1="78" x2="600" y2="196" stroke="' + C_TRNA + '" stroke-width="10" stroke-linecap="round"/>';
-  s += '<circle cx="572" cy="138" r="18" fill="none" stroke="' + C_TRNA + '" stroke-width="7"/>';
-  s += '<circle cx="628" cy="138" r="18" fill="none" stroke="' + C_TRNA + '" stroke-width="7"/>';
-  s += '<rect x="566" y="196" width="68" height="30" rx="10" fill="' + C_TRNA + '"/>';
-  s += txt('', 600, 217, 'U A C', 15, '#fff', 'middle', 800);
-  s += txt('', 612, 82, '3′', 13, C_TRNA_INK, 'start', 800);
-  s += '<circle cx="600" cy="66" r="9" fill="#fff" stroke="' + C_TRNA + '" stroke-width="3"/>';
+  /* tRNA — ★한 가닥이 접힌 모양(교과서 그림 Ⅱ-6). 2026-10-14 교사: 「하나의 가닥으로 이어지는 것을 명확히」.
+     5′ 끝에서 출발한 한 줄이 왼쪽 고리 → 아래(안티코돈) 고리 → 오른쪽 고리를 돌아 3′ 끝으로 나온다.
+     줄기의 점선은 접혀 마주 본 가닥 사이의 수소결합이다. 3′ 끝이 더 길고 그 끝에 아미노산이 결합한다. */
+  var TR = 'M588,72 L588,122 L566,122 C532,108 532,156 566,142 L588,142 L588,176 C552,230 648,230 612,176 ' +
+           'L612,142 L634,142 C668,156 668,108 634,122 L612,122 L612,60';
+  [84, 98, 112, 154, 166].forEach(function(y){
+    s += '<line x1="591" y1="' + y + '" x2="609" y2="' + y + '" stroke="#9AA1AC" stroke-width="1.6" stroke-dasharray="3,3"/>';
+  });
+  [572, 581, 619, 628].forEach(function(x){ s += '<line x1="' + x + '" y1="125" x2="' + x + '" y2="139" stroke="#9AA1AC" stroke-width="1.6" stroke-dasharray="3,3"/>'; });
+  s += '<path d="' + TR + '" fill="none" stroke="' + C_TRNA + '" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>';
+  s += txt('', 600, 238, 'U A C', 15, C_TRNA_INK, 'middle', 800);
+  s += txt('', 580, 76, '5′', 13, C_TRNA_INK, 'end', 800);
+  s += txt('', 622, 66, '3′', 13, C_TRNA_INK, 'start', 800);
+  s += '<circle cx="612" cy="52" r="8" fill="#fff" stroke="' + C_TRNA + '" stroke-width="3"/>';
   /* 빈 이름 칸 — 끌어 놓을 자리. 지시선으로 가리키는 곳을 잇는다 */
-  var LEAD = { a:[156,96,168,112], b:[156,226,180,224], c:[260,46,302,104], d:[370,46,380,104], e:[600,254,600,226], f:[600,46,600,58] };
+  var LEAD = { a:[156,96,168,112], b:[156,226,180,224], c:[260,46,302,104], d:[370,46,380,104], e:[600,254,600,244], f:[612,46,612,44] };
   Object.keys(PART_SLOTS).forEach(function(k){
     var p = PART_SLOTS[k], on = state.labels[k] === p.name, l = LEAD[k];
     s += '<line x1="' + l[0] + '" y1="' + l[1] + '" x2="' + l[2] + '" y2="' + l[3] + '" stroke="#8A93A0" stroke-width="1.4"/>';
-    s += '<g class="slotpick" onclick="dropPart(&#39;' + k + '&#39;)">';
+    s += '<g class="slotpick" data-drop="part:' + k + '" onclick="dropPart(&#39;' + k + '&#39;)">';
     s += '<rect x="' + (p.x - 0) + '" y="' + (p.y - 16) + '" width="150" height="32" rx="9" fill="' + (on ? '#E9F5EB' : '#fff') +
          '" stroke="' + (on ? '#2A7A38' : '#8A93A0') + '" stroke-width="' + (on ? 2.4 : 1.8) + '"' + (on ? '' : ' stroke-dasharray="5,4"') + '/>';
     s += txt('', p.x + 10, p.y + 5, p.mark, 15, on ? '#2A7A38' : '#5A6270', 'start', 800);
@@ -968,7 +1046,7 @@ function partChipsHtml(){
   PART_CHIPS.forEach(function(nm){
     var used = Object.keys(state.labels).some(function(k){ return state.labels[k] === nm; });
     h += '<button type="button" class="chip' + (ptSel === nm ? ' sel' : '') + '"' + (used ? ' disabled' : '') +
-         ' onclick="pickPart(&#39;' + nm + '&#39;)">' + nm + '</button>';
+         dragAttrs('part', nm) + ' onclick="dragClick(&#39;part&#39;, &#39;' + nm + '&#39;)">' + nm + '</button>';
   });
   return h;
 }
@@ -1190,8 +1268,8 @@ function trTaskHtml(){
   var a = trNext(), m = trModel(state.tStep);
   if (a === 'place') return 'mRNA 의 염기 하나를 눌러 라이보솜을 놓으시오. <b>누른 염기부터 세 염기가 P 자리</b>에 온다. <b>개시코돈</b>이 P 자리에 오게 하시오.' +
     '<br><span class="note">※ 실제로는 소단위체에 mRNA 와 개시 tRNA 가 먼저 결합하고 대단위체가 나중에 결합한다(②). 탐구처럼 두 단위체가 결합한 모양을 쓴다.</span>';
-  if (a === 'dockP') return '개시코돈과 짝이 맞는 tRNA 카드를 고른 뒤, 라이보솜의 <b>P 자리</b>를 누르시오.';
-  if (a === 'dockA' || a === 'none') return 'A 자리 코돈 <b>' + codonStr(C3[m.pc + 1]) + '</b> 과 짝이 맞는 tRNA 카드를 고른 뒤 <b>A 자리</b>를 누르시오. ' +
+  if (a === 'dockP') return '개시코돈과 짝이 맞는 tRNA 카드를 라이보솜의 <b>P 자리</b>로 끌어 놓으시오. (카드를 누른 뒤 자리를 눌러도 된다)';
+  if (a === 'dockA' || a === 'none') return 'A 자리 코돈 <b>' + codonStr(C3[m.pc + 1]) + '</b> 과 짝이 맞는 tRNA 카드를 <b>A 자리</b>로 끌어 놓으시오. ' +
     '짝이 맞는 tRNA 가 없으면 <b>🚫 결합하는 tRNA 없음</b>을 누르시오.';
   if (a === 'bond') return '<b>🔗 펩타이드결합</b>을 누르시오 — P 자리 tRNA 의 아미노산(사슬)을 A 자리 tRNA 의 아미노산에 잇는다.';
   if (a === 'move') return '<b>➡ 라이보솜 한 코돈 이동</b>을 누르시오 — 라이보솜이 mRNA 의 3′ 쪽으로 한 코돈 옮겨 간다.';
@@ -1204,7 +1282,7 @@ function trTrayHtml(){
   CARDS.forEach(function(k){
     if (used[k.id]) return;
     h += '<button type="button" class="tcard' + (trSel === k.id ? ' sel' : '') + '"' + (live ? '' : ' disabled') +
-         ' onclick="trPick(&#39;' + k.id + '&#39;)"><span class="tci">tRNA</span><span class="ac">' + acStr(k.ac) + '</span><span class="aa">아미노산 ?</span></button>';
+         dragAttrs('card', k.id) + ' onclick="dragClick(&#39;card&#39;, &#39;' + k.id + '&#39;)"><span class="tci">tRNA</span><span class="ac">' + acStr(k.ac) + '</span><span class="aa">아미노산 ?</span></button>';
   });
   h += '<button type="button" class="tcard none' + (trSel === 'none' ? ' sel' : '') + '"' + (live ? '' : ' disabled') +
        ' onclick="trNone()">🚫 결합하는 tRNA 없음</button>';
