@@ -421,6 +421,9 @@ table.ctab td{padding:0;}
 .rdrow select{font:inherit;font-size:16px;min-height:44px;padding:4px 8px;border:1.5px solid #B9C2CC;border-radius:8px;background:#fff;}
 .rdrow .rdmark{font-size:18px;min-width:24px;}
 .qaid{margin:0 0 8px;}
+/* ② 연출 — 펩타이드결합 선은 알약이 다 옮겨 간 뒤에 나타난다 */
+.bondln{transition:opacity .35s ease .55s;}
+@media (prefers-reduced-motion: reduce){ .bondln{transition:none !important;} }
 /* 끌어 놓기 */
 .chip,.tcard{touch-action:none;user-select:none;-webkit-user-select:none;}
 .dragghost{position:fixed;left:0;top:0;z-index:60;pointer-events:none;transform:translate(-50%,-70%);background:var(--ribo);color:#fff;font-weight:800;font-size:16px;padding:8px 14px;border-radius:999px;box-shadow:0 6px 16px rgba(0,0,0,.25);}
@@ -485,7 +488,7 @@ table.ctab td{padding:0;}
     </div>
     <div class="panes">
       <div class="pane-l">
-        <div class="stage-wrap"><svg class="stage" id="tlStage" viewBox="0 0 700 330" xmlns="http://www.w3.org/2000/svg" role="img"
+        <div class="stage-wrap"><svg class="stage" id="tlStage" viewBox="0 0 700 372" xmlns="http://www.w3.org/2000/svg" role="img"
              aria-label="라이보솜 소단위체와 대단위체가 mRNA 에 결합하고, tRNA 가 A 자리로 들어와 펩타이드결합을 이루며, 라이보솜이 한 코돈씩 이동하다 종결코돈에서 분리되는 열한 국면의 무대"></svg></div>
         <div class="anibar">
           <button type="button" class="btn ribo ghost" id="tl_first" onclick="aniGo(-99)">⏮ 처음부터</button>
@@ -875,47 +878,70 @@ function mrnaSvg(seq, opts){
   }
   return s;
 }
-/* 라이보솜 — P 자리 코돈의 왼쪽 끝이 pX 일 때, E·P·A 세 코돈을 덮는다 */
-function riboSvg(pX, mode, slotTap){
+/* 라이보솜 — P 자리 코돈의 왼쪽 끝이 pX 일 때, E·P·A 세 코돈을 덮는다.
+   ★두 단위체를 따로 그린다 — ② 연출에서 따로 움직여야 한다. 좌표가 pX 에 대해 선형이라 pX=0 으로 그려 옮겨도 같다. */
+function riboSmallSvg(pX){
+  var w3 = 3 * RG.pitch, L = pX - w3 - 10, W = 3 * w3 + 16;
+  return '<rect x="' + L + '" y="' + (RG.yM + RG.hM - 2) + '" width="' + W + '" height="40" rx="20" fill="' + C_RIBO + '" fill-opacity=".55"/>' +
+         txt('', L + W - 14, RG.yM + RG.hM + 26, '소단위체', 12.5, '#fff', 'end', 800);
+}
+function riboLargeSvg(pX, slotTap){
   var s = '', w3 = 3 * RG.pitch, L = pX - w3 - 10, W = 3 * w3 + 16;
-  if (mode === 'small' || mode === 'full'){
-    s += '<rect x="' + L + '" y="' + (RG.yM + RG.hM - 2) + '" width="' + W + '" height="40" rx="18" fill="' + C_RIBO + '" fill-opacity=".55"/>';
-    s += txt('', L + W - 12, RG.yM + RG.hM + 26, '소단위체', 12.5, '#fff', 'end', 800);
-  }
-  if (mode === 'full'){
-    s += '<rect x="' + L + '" y="' + (RG.yM - 112) + '" width="' + W + '" height="114" rx="26" fill="' + C_RIBO + '" fill-opacity=".16" stroke="' + C_RIBO + '" stroke-width="2.5"/>';
-    s += txt('', L + W + 6, RG.yM - 56, '대단위체', 12.5, C_RIBO_INK, 'start', 800);   /* ★자리 이름(A 자리)과 겹치지 않게 바깥 오른쪽 */
-    ['E', 'P', 'A'].forEach(function(k, j){
-      var cx = pX + (j - 1) * w3 + (w3 - 4) / 2;
-      s += '<g' + (slotTap ? ' class="slotpick" data-drop="site:' + k + '" onclick="' + slotTap + '(&#39;' + k + '&#39;)"' : '') + '>';
-      s += '<rect x="' + (cx - (w3 - 10) / 2) + '" y="' + (RG.yM - 72) + '" width="' + (w3 - 10) + '" height="70" rx="10" fill="#fff" fill-opacity=".35" stroke="' + C_RIBO + '" stroke-width="1.6" stroke-dasharray="5,4"/>';
-      s += txt('', cx, RG.yM - 80, k + ' 자리', 13, C_RIBO_INK, 'middle', 800);
-      s += '</g>';
-    });
-  }
+  s += '<rect x="' + L + '" y="' + (RG.yM - 112) + '" width="' + W + '" height="114" rx="34" fill="' + C_RIBO + '" fill-opacity=".16" stroke="' + C_RIBO + '" stroke-width="2.5"/>';
+  s += txt('', L + W + 6, RG.yM - 56, '대단위체', 12.5, C_RIBO_INK, 'start', 800);   /* ★자리 이름(A 자리)과 겹치지 않게 바깥 오른쪽 */
+  ['E', 'P', 'A'].forEach(function(k, j){
+    var cx = pX + (j - 1) * w3 + (w3 - 4) / 2;
+    s += '<g' + (slotTap ? ' class="slotpick" data-drop="site:' + k + '" onclick="' + slotTap + '(&#39;' + k + '&#39;)"' : '') + '>';
+    s += '<rect x="' + (cx - (w3 - 10) / 2) + '" y="' + (RG.yM - 72) + '" width="' + (w3 - 10) + '" height="70" rx="10" fill="#fff" fill-opacity=".35" stroke="' + C_RIBO + '" stroke-width="1.6" stroke-dasharray="5,4"/>';
+    /* ★tRNA 줄기가 이름 위를 지나간다 — 흰 테두리(paint-order)로 글자를 띄운다 */
+    s += '<text x="' + cx + '" y="' + (RG.yM - 80) + '" font-size="13" fill="' + C_RIBO_INK + '" text-anchor="middle" font-weight="800"' +
+         ' stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">' + k + ' 자리</text>';
+    s += '</g>';
+  });
   return s;
 }
-/* tRNA 한 개 — 코돈 바로 위에 안티코돈 세 글자가 마주 선다. 사슬(아미노산 목록)은 줄기 위로 이어진다 */
-function trnaSvg(cX, ac, chain, opts){
-  opts = opts || {};
-  var s = '', w3 = 3 * RG.pitch, mid = cX + (w3 - 4) / 2, yB = RG.yM - 30, i;
-  var op = opts.dim ? ' opacity=".45"' : '';
-  s += '<g' + op + '>';
-  var top = (chain.length ? RG.yM - 133 : RG.yM - 104);   /* 사슬을 단 tRNA 만 줄기가 알약까지 올라간다 */
-  s += '<line x1="' + mid + '" y1="' + (yB - 4) + '" x2="' + mid + '" y2="' + top + '" stroke="' + C_TRNA + '" stroke-width="6" stroke-linecap="round"/>';
+function riboSvg(pX, mode, slotTap){
+  var s = '';
+  if (mode === 'small' || mode === 'full') s += riboSmallSvg(pX);
+  if (mode === 'full') s += riboLargeSvg(pX, slotTap);
+  return s;
+}
+/* tRNA 한 개 — ★한 가닥이 접힌 모양(① 의 그림을 줄인 것 · 2026-10-14 교사 「하나의 가닥으로 이어지는 것을 명확히」).
+   5′ 끝(왼쪽 줄기)에서 내려와 왼쪽 고리 → 안티코돈 고리(상자) → 오른쪽 고리를 돌아 3′ 끝(오른쪽 줄기)으로 올라간다.
+   3′ 끝의 동그라미가 아미노산 결합 자리다. 안티코돈 세 글자는 코돈 바로 위에 마주 선다. 좌표는 cX 에 대해 선형이다. */
+var TRNA_3X = 7;                                   /* 3′ 줄기가 가운데에서 오른쪽으로 떨어진 거리 — 사슬이 여기에 붙는다 */
+function trnaBodySvg(cX, ac){
+  var s = '', w3 = 3 * RG.pitch, m = cX + (w3 - 4) / 2, yB = RG.yM - 30, i, d = TRNA_3X;
+  var P = function(x, y){ return (Math.round(x * 10) / 10) + ',' + y; };
+  [152, 162, 172, 202, 211].forEach(function(y){
+    s += '<line x1="' + (m - d + 2.5) + '" y1="' + y + '" x2="' + (m + d - 2.5) + '" y2="' + y + '" stroke="#9AA1AC" stroke-width="1.4" stroke-dasharray="2,2"/>';
+  });
+  s += '<path d="M' + P(m - d, 148) + ' L' + P(m - d, 180) + ' L' + P(m - 20, 180) + ' C' + P(m - 42, 171) + ' ' + P(m - 42, 199) + ' ' + P(m - 20, 190) +
+       ' L' + P(m - d, 190) + ' L' + P(m - d, yB + 4) + ' L' + P(m + d, yB + 4) + ' L' + P(m + d, 190) + ' L' + P(m + 20, 190) +
+       ' C' + P(m + 42, 199) + ' ' + P(m + 42, 171) + ' ' + P(m + 20, 180) + ' L' + P(m + d, 180) + ' L' + P(m + d, 124) + '"' +
+       ' fill="none" stroke="' + C_TRNA + '" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  s += '<circle cx="' + (m + d) + '" cy="120" r="4" fill="#fff" stroke="' + C_TRNA + '" stroke-width="2.5"/>';
   s += '<rect x="' + (cX + 2) + '" y="' + yB + '" width="' + (w3 - 8) + '" height="28" rx="9" fill="' + C_TRNA + '"/>';
   for (i = 0; i < 3; i++) s += txt('', cX + i * RG.pitch + RG.cw / 2, yB + 20, ac.charAt(i), 15, '#fff', 'middle', 800);
-  s += '<circle cx="' + (cX + 9) + '" cy="' + (yB + 6) + '" r="2.4" fill="#fff"/>';
-  s += '</g>';
-  /* 사슬 — 가장 최근 것이 이 tRNA 줄기 끝에 붙고, 앞의 것은 위 오른쪽(A 자리 쪽)으로 비스듬히 쌓인다.
-     ★왼쪽으로 늘어놓으면 앞 알약이 E 자리 tRNA 위에 와서 「빈 tRNA 가 아미노산을 달았다」로 읽힌다(실측) — 그래서 E 의 반대쪽으로 */
-  var n = chain.length, pts = [];
-  for (i = 0; i < n; i++) pts.push({ x:mid + (n - 1 - i) * 40, y:RG.yM - 146 - (n - 1 - i) * 26 });
+  return s;
+}
+/* 사슬의 j 번째(0 = 가장 먼저 붙은 것) 알약 자리 — 가장 최근 것이 3′ 끝 바로 위, 앞의 것은 위 오른쪽(A 자리 쪽)으로 비스듬히.
+   ★왼쪽으로 늘어놓으면 앞 알약이 E 자리 tRNA 위에 와서 「빈 tRNA 가 아미노산을 달았다」로 읽힌다(실측) — 그래서 E 의 반대쪽으로 */
+function chainPt(cX, n, j){
+  var m = cX + (3 * RG.pitch - 4) / 2 + TRNA_3X;
+  return { x:m + (n - 1 - j) * 40, y:RG.yM - 146 - (n - 1 - j) * 26 };
+}
+function pillSvg(x, y, nm, op){
+  return '<rect x="' + (x - 34) + '" y="' + (y - 13) + '" width="68" height="26" rx="13" fill="' + C_AA + '"' + op + '/>' +
+         txt('', x, y + 5, nm, nm.length > 4 ? 11 : 12.5, '#fff', 'middle', 800);
+}
+function trnaSvg(cX, ac, chain, opts){
+  opts = opts || {};
+  var s = '', i, op = opts.dim ? ' opacity=".45"' : '', n = chain.length, pts = [];
+  s += '<g' + op + '>' + trnaBodySvg(cX, ac) + '</g>';
+  for (i = 0; i < n; i++) pts.push(chainPt(cX, n, i));
   for (i = 0; i < n - 1; i++) s += '<line x1="' + pts[i].x + '" y1="' + pts[i].y + '" x2="' + pts[i + 1].x + '" y2="' + pts[i + 1].y + '" stroke="' + C_AA + '" stroke-width="4"' + op + '/>';
-  for (i = 0; i < n; i++){
-    s += '<rect x="' + (pts[i].x - 34) + '" y="' + (pts[i].y - 13) + '" width="68" height="26" rx="13" fill="' + C_AA + '"' + op + '/>';
-    s += txt('', pts[i].x, pts[i].y + 5, chain[i], chain[i].length > 4 ? 11 : 12.5, '#fff', 'middle', 800);
-  }
+  for (i = 0; i < n; i++) s += pillSvg(pts[i].x, pts[i].y, chain[i], op);
   return s;
 }
 
@@ -1152,7 +1178,10 @@ function sceneSvg(seq, start, codons, m, opts){
 
 /* ══════════════════ 8. ② 개시 · 신장 · 종결 — 연출 (그림 Ⅱ-5) ══════════════════
    ★한 국면에 한 사건. 타이머를 쓰지 않는다 — ▶ 를 누를 때만 국면이 바뀐다.
-   ★국면마다 통째로 다시 그린다 — 모형(simulate)이 계약면이고, 검사는 stLayout 만 문다. */
+   ★한 번 짓고 위치만 옮긴다(제작 표준 §3 · 전사 모의실험과 같은 방식 · 2026-10-14 교사 「너무 투박해. 앞선 활동의 애니메이션처럼」).
+     물체마다 id 를 고정한 <g class="rmove"> — 소단위체 · 대단위체 · tRNA 셋 · 아미노산 셋. 국면이 바뀌면 transform·opacity 만 바뀌어
+     대단위체가 내려와 결합하고, 메싸이오닌이 알라닌 위로 옮겨 붙고, 빈 tRNA 가 E 자리에서 떠나는 것이 미끄러지며 보인다.
+   ★모형(simulate)이 계약면이고, 놓인 자리는 stLayout 이 계산한다 — 검사는 stLayout 을 문다. */
 var ST_ACTS = [
   [],
   ['small'],
@@ -1194,38 +1223,115 @@ var ST_CAP = [
 ];
 var ST_BAND = ['', 'init', 'init', 'init', 'elong', 'elong', 'elong', 'elong', 'elong', 'term', 'term'];
 function aniLast(){ return ST_STEPS.length - 1; }
+/* 단위체가 따로 있을 때의 자리(국면 0 · 분리 뒤) — 오른쪽 바깥. 분리된 것은 처음 자리로 돌아가 「재사용」된다 */
+var ST_FREE = { lg:{ x:420, y:-60 }, sm:{ x:440, y:46 } };
+var ST_NT = 3;                                          /* tRNA 가 오는 코돈 수 — 종결코돈 앞까지 */
+var ST_PEP = { x:150, y:150 };                          /* 분리된 폴리펩타이드 — 맨 나중 아미노산 자리 */
+function stArrive(k){                                   /* tRNA k 가 처음 결합하는 국면 */
+  var p;
+  for (p = 0; p < ST_ACTS.length; p++){
+    var m = simulate(C2, ST_ACTS[p]);
+    if (['E', 'P', 'A'].some(function(q){ return m[q] && m[q].c === k; })) return p;
+  }
+  return ST_ACTS.length;
+}
 function stLayout(ph){
   var p = Math.max(0, Math.min(aniLast(), Number(ph) || 0));
-  return { ph:p, m:simulate(C2, ST_ACTS[p]), band:ST_BAND[p], step:ST_STEPS[p], cap:ST_CAP[p] };
+  var m = simulate(C2, ST_ACTS[p]), pX = codonX(M2_START, m.pc), k, j;
+  var L = { ph:p, m:m, band:ST_BAND[p], step:ST_STEPS[p], cap:ST_CAP[p], trna:[], aa:[] };
+  L.sm = (m.ribo === 'small' || m.ribo === 'full') ? { x:pX, y:0, op:1 } : { x:ST_FREE.sm.x, y:ST_FREE.sm.y, op:1 };
+  L.lg = (m.ribo === 'full') ? { x:pX, y:0, op:1 } : { x:ST_FREE.lg.x, y:ST_FREE.lg.y, op:1 };
+  for (k = 0; k < ST_NT; k++){
+    var cx = codonX(M2_START, k), on = ['E', 'P', 'A'].some(function(q){ return m[q] && m[q].c === k; });
+    var t;
+    if (on) t = { x:cx, y:0, op:1, where:'site' };
+    else if (p < stArrive(k)) t = (k === 0) ? { x:cx, y:-56, op:1, where:'float' }      /* 개시 tRNA 는 처음부터 떠 있다 */
+                                          : { x:cx + 60, y:-90, op:0, where:'before' }; /* 오른쪽 위에서 들어온다 */
+    else t = { x:cx - 60, y:-90, op:0, where:'gone' };                                  /* 왼쪽 위로 떠난다 */
+    L.trna.push(t);
+  }
+  /* 아미노산 — 어느 tRNA 의 사슬에 몇 번째로 붙어 있는가 */
+  for (k = 0; k < ST_NT; k++){
+    var a = null;
+    if (m.released){
+      var n = m.peptide.length;
+      a = { x:ST_PEP.x + (n - 1 - k) * 40, y:ST_PEP.y - (n - 1 - k) * 26, op:1, bond:k >= 1 };
+    } else {
+      ['E', 'P', 'A'].forEach(function(q){
+        var s = m[q];
+        if (!s || !s.chain.length) return;
+        var first = s.c - s.chain.length + 1;
+        if (k >= first && k <= s.c){ j = k - first; var pt = chainPt(codonX(M2_START, s.c), s.chain.length, j); a = { x:pt.x, y:pt.y, op:1, bond:j >= 1 }; }
+      });
+      if (!a){                                          /* 아직 tRNA 에 달린 채 들어오는 중 */
+        var tr = L.trna[k], q0 = chainPt(tr.x, 1, 0);
+        a = { x:q0.x, y:q0.y + tr.y, op:tr.op, bond:false };
+      }
+    }
+    L.aa.push(a);
+  }
+  L.none = { x:codonCx(M2_START, m.pc + 1), op:(m.stopSeen && !m.released) ? 1 : 0 };
+  L.pepLab = m.released ? 1 : 0;
+  return L;
 }
+function stTf(o){ return ' transform="translate(' + (Math.round(o.x * 10) / 10) + ',' + (Math.round(o.y * 10) / 10) + ')" opacity="' + o.op + '"'; }
+/* ★무대를 짓는다 — 지을 때의 국면 자리를 미리 박아 둔다(안 그러면 처음 열 때 모든 물체가 원점에서 날아온다) */
 function stageSvg(ph){
-  var L = stLayout(ph), s = '';
+  var L = stLayout(ph), s = '', k;
   var bxs = { init:250, elong:350, term:450 };
-  ['init', 'elong', 'term'].forEach(function(k){
-    var on = (L.band === k), nm = (k === 'init') ? '① 개시' : (k === 'elong') ? '② 신장' : '③ 종결';
-    s += '<rect x="' + (bxs[k] - 42) + '" y="8" width="84" height="26" rx="13" fill="' + (on ? C_RIBO : '#EEF0F3') + '"/>';
-    s += txt('', bxs[k], 26, nm, 14, on ? '#fff' : '#98A0AC', 'middle', 800);
+  ['init', 'elong', 'term'].forEach(function(b){
+    var on = (L.band === b), nm = (b === 'init') ? '① 개시' : (b === 'elong') ? '② 신장' : '③ 종결';
+    s += '<rect id="st_bdr_' + b + '" x="' + (bxs[b] - 42) + '" y="8" width="84" height="26" rx="13" fill="' + (on ? C_RIBO : '#EEF0F3') + '"/>';
+    s += txt('st_bdt_' + b, bxs[b], 26, nm, 14, on ? '#fff' : '#98A0AC', 'middle', 800);
   });
-  s += sceneSvg(M2, M2_START, C2, L.m, { w:700 });
-  if (L.ph < 3){
-    /* 아직 결합하지 않은 것들 — 대단위체는 오른쪽 위에 따로 */
-    s += '<rect x="500" y="56" width="180" height="70" rx="26" fill="' + C_RIBO + '" fill-opacity=".16" stroke="' + C_RIBO + '" stroke-width="2.5"/>';
-    s += txt('', 590, 96, '대단위체', 13, C_RIBO_INK, 'middle', 800);
+  s += mrnaSvg(M2, {});
+  s += '<g id="st_sm" class="rmove"' + stTf(L.sm) + '>' + riboSmallSvg(0) + '</g>';
+  s += '<g id="st_lg" class="rmove"' + stTf(L.lg) + '>' + riboLargeSvg(0, '') + '</g>';
+  for (k = 0; k < ST_NT; k++){
+    s += '<g id="st_t' + k + '" class="rmove"' + stTf(L.trna[k]) + '>' + trnaBodySvg(0, anticodon(C2[k])) + '</g>';
   }
-  if (L.ph < 1){
-    s += '<rect x="510" y="292" width="160" height="32" rx="15" fill="' + C_RIBO + '" fill-opacity=".55"/>';
-    s += txt('', 590, 313, '소단위체', 12.5, '#fff', 'middle', 800);
+  /* ★아미노산은 뒤의 것부터 그린다 — 펩타이드결합 선(앞 아미노산 쪽으로 뻗는다)이 앞 알약 밑에 깔리게 */
+  for (k = ST_NT - 1; k >= 0; k--){
+    s += '<g id="st_a' + k + '" class="rmove"' + stTf(L.aa[k]) + '>';
+    if (k >= 1) s += '<line id="st_bd' + k + '" class="bondln" x1="0" y1="0" x2="40" y2="-26" stroke="' + C_AA + '" stroke-width="4" opacity="' + (L.aa[k].bond ? 1 : 0) + '"/>';
+    s += pillSvg(0, 0, aaOf(C2[k]), '') + '</g>';
   }
-  if (L.ph < 2){
-    /* 개시 tRNA 는 떠 있다 — 아직 결합하지 않았다 */
-    s += '<g transform="translate(0,-74)">' + trnaSvg(codonX(M2_START, 0), anticodon('AUG'), ['메싸이오닌'], {}) + '</g>';
-  }
+  s += '<g id="st_none" class="rmove"' + stTf({ x:L.none.x, y:0, op:L.none.op }) + '>' +
+       txt('', 0, RG.yM - 40, '결합하는', 12.5, '#C0392B', 'middle', 800) + txt('', 0, RG.yM - 24, 'tRNA 없음', 12.5, '#C0392B', 'middle', 800) + '</g>';
+  s += '<g id="st_pep" class="rfade" opacity="' + L.pepLab + '">' + txt('', ST_PEP.x, ST_PEP.y + 36, '폴리펩타이드', 13, C_AA, 'middle', 800) + '</g>';
   return s;
 }
+function stPut(id, o){
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.setAttribute('transform', 'translate(' + (Math.round(o.x * 10) / 10) + ',' + (Math.round(o.y * 10) / 10) + ')');
+  el.setAttribute('opacity', String(o.op));
+}
+function stFade(id, op){ var el = document.getElementById(id); if (el) el.setAttribute('opacity', String(op)); }
+function stFill(id, c){ var el = document.getElementById(id); if (el) el.setAttribute('fill', c); }
+function stApply(ph){
+  var L = stLayout(ph), k;
+  stPut('st_sm', L.sm); stPut('st_lg', L.lg);
+  for (k = 0; k < ST_NT; k++){
+    stPut('st_t' + k, L.trna[k]);
+    stPut('st_a' + k, L.aa[k]);
+    if (k >= 1) stFade('st_bd' + k, L.aa[k].bond ? 1 : 0);
+  }
+  stPut('st_none', { x:L.none.x, y:0, op:L.none.op });
+  stFade('st_pep', L.pepLab);
+  ['init', 'elong', 'term'].forEach(function(b){
+    var on = (L.band === b);
+    stFill('st_bdr_' + b, on ? C_RIBO : '#EEF0F3');
+    stFill('st_bdt_' + b, on ? '#fff' : '#98A0AC');
+  });
+  return L;
+}
 var ANI = { ph:0 };
+var stMounted = false;
 function tlRender(){
-  var L = stLayout(ANI.ph);
-  setHTML('tlStage', stageSvg(L.ph));
+  var host = document.getElementById('tlStage');
+  if (host && !stMounted){ host.innerHTML = stageSvg(ANI.ph); stMounted = true; }
+  var L = stApply(ANI.ph);
   setHTML('tl_cap', L.cap);
   var st = document.getElementById('tl_step');
   if (st) st.innerHTML = L.step + ' <b>' + (L.ph + 1) + ' / ' + (aniLast() + 1) + '</b>';
