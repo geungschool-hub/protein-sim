@@ -700,14 +700,15 @@ function codonsFrom(seq, start){
 var C3 = codonsFrom(M3, M3_START);   /* AUG UUC GGC AAA UAG */
 var C2 = codonsFrom(M2, M2_START);   /* AUG GCU UGG UAA */
 
-/* ③ 의 tRNA 카드 — 넷은 짝이 있고 둘은 미끼. 아미노산 이름은 짝이 맞아 들어간 뒤에만 보인다.
-   미끼 ① 한 글자만 다른 것(k2) · ② 방향 함정(k5 · 2026-10-15 교사 「역평행으로 붙어야 한다는 걸 헷갈릴 것」) —
-   다른 카드는 모두 3′→5′ 으로 적는데 k5 만 5′→3′ 으로 적는다. 글자만 왼쪽부터 맞대면 GGC 와 짝처럼 보이지만 3′→5′ 으로 읽으면 GCC 이다. */
+/* ③ 의 tRNA 카드 — 넷은 짝이 있고 셋은 미끼. 아미노산 이름은 짝이 맞아 들어간 뒤에만 보인다.
+   미끼 ① 한 글자만 다른 것(k2) · ② 방향 함정 둘(k7 개시 · k5 GGC · 2026-10-15 교사 「역평행으로 붙어야 한다는 걸 헷갈릴 것」 「AUG 에 붙는 tRNA 에도」) —
+   다른 카드는 모두 3′→5′ 으로 적는데 함정 카드만 5′→3′ 으로 적는다. 글자만 왼쪽부터 맞대면 GGC 와 짝처럼 보이지만 3′→5′ 으로 읽으면 GCC 이다. */
 var CARDS = [
   { id:'k1', ac:anticodon('GGC') },   /* CCG */
   { id:'k2', ac:'AAC' },              /* 미끼 — UUG 와 짝(UUC 와 셋째 글자만 다르다) */
   { id:'k3', ac:anticodon('AUG') },   /* UAC — 개시 tRNA */
   { id:'k4', ac:anticodon('AAA') },   /* UUU */
+  { id:'k7', ac:'CAU', flip:true },   /* 방향 함정(개시) — 카드에는 5′-UAC-3′ 으로 적힌다(정답 3′-UAC-5′ 과 글자가 같다 · 3′→5′ 으로 읽으면 CAU · GUA 와 짝) */
   { id:'k5', ac:'GCC', flip:true },   /* 방향 함정 — 카드에는 5′-CCG-3′ 으로 적힌다(3′→5′ 으로 읽으면 GCC · CGG 와 짝) */
   { id:'k6', ac:anticodon('UUC') }    /* AAG */
 ];
@@ -1584,18 +1585,21 @@ function codonTableHtml(){
 var PY = { Y:200, xs:110, xe:580, V:62, GAP:2.1, AAPX:32, REL:0.9, SNAP:7.0 };
 PY.TR = (PY.xe - PY.xs) / PY.V;                         /* 한 라이보솜이 개시코돈에서 종결코돈까지 가는 시간 */
 PY.MAXAA = 1 + Math.floor((PY.xe - PY.xs) / PY.AAPX);  /* 완성된 폴리펩타이드의 아미노산 수 */
-PY.END = 3 * PY.GAP + PY.TR + PY.REL + 0.6;
+PY.N = 8;                                              /* 라이보솜 수 — ㉠~㉣ 넷 + 그 뒤로 계속 붙는 넷(2026-10-15 교사 「진행됨에 따라 새로운 라이보솜도 붙게」) */
+PY.END = (PY.N - 1) * PY.GAP + PY.TR + PY.REL + 0.6;
 var POLY_MARK = ['㉠', '㉡', '㉢', '㉣'];
 var POLY = [1, 2, 3, 4].map(function(n){ return { n:n, start:(4 - n) * PY.GAP }; });   /* ㉣ 이 가장 먼저 결합한다 */
 var POLY_ANS = 4;   /* 가장 먼저 시작 = 3′ 쪽에 가장 가까이 간 라이보솜 */
+/* 모든 라이보솜 — 앞 넷이 ㉠~㉣(누를 수 있다) · 뒤 넷은 이름 없이 ㉠ 다음으로 차례로 붙는다(문제 장면 뒤에 들어온다) */
+var PYR = POLY.concat([5, 6, 7, 8].map(function(n){ return { n:n, start:(n - 1) * PY.GAP }; }));
 function pyEase(u){ return u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2; }
 function pyAaOn(x, j){ return { x:x - 4 - (j % 2) * 9, y:PY.Y - 40 - j * 9 }; }      /* j = 0 이 라이보솜 바로 위(가장 최근) */
-function pyPark(o, n, j){ return { x:566 + (n - 1 - j) * 8, y:34 + o * 15 }; }          /* 완성된 사슬 — 오른쪽 위에 끝난 차례대로 */
+function pyPark(o, n, j){ return { x:590 + (n - 1 - j) * 7, y:34 + o * 12 }; }          /* 완성된 사슬 — 오른쪽 위에 끝난 차례대로 */
 function pyLayout(t){
   t = Math.max(0, Math.min(PY.END, Number(t) || 0));
   var L = { t:t, r:[], done:0 };
-  POLY.forEach(function(r){
-    var o = 4 - r.n, u = t - r.start, R = { n:r.n, x:PY.xs, dy:0, op:0, lg:0, sm:0, aa:[], phase:'wait' }, j, n;
+  PYR.forEach(function(r){
+    var o = Math.round(r.start / PY.GAP), u = t - r.start, R = { n:r.n, x:PY.xs, dy:0, op:0, lg:0, sm:0, aa:[], phase:'wait' }, j, n;
     if (u < 0){
       var k = Math.max(0, 1 + u / 0.6);                    /* 결합 직전 0.6초 — 위에서 내려와 붙는다 */
       R.op = k; R.dy = -40 * (1 - k); R.phase = k > 0 ? 'come' : 'wait';
@@ -1627,18 +1631,18 @@ function pyStageSvg(){
   s += txt('', 686, Y + 5, '3′', 14, C_SUB, 'start', 800);
   /* 사슬(라이보솜 뒤에 그린다 — 떨어져 나갈 때 따로 움직인다) */
   var L = pyLayout(PYA.t);
-  for (k = 0; k < 4; k++){
+  for (k = 0; k < PYR.length; k++){
     s += '<g id="py_c' + k + '">';
     for (j = 0; j < PY.MAXAA; j++){ var q = L.r[k].aa[j]; s += '<circle id="py_a' + k + '_' + j + '" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="5.5" fill="' + C_AA + '" opacity="' + q.op + '"/>'; }
     s += '</g>';
   }
-  s += txt('py_done', 626, 14, '완성된 폴리펩타이드', 12.5, C_AA, 'middle', 800);
+  s += txt('py_done', 639, 14, '완성된 폴리펩타이드', 12.5, C_AA, 'middle', 800);
   /* 라이보솜 — 누르면 고른다 */
-  for (k = 0; k < 4; k++){
-    s += '<g id="py_r' + k + '" class="slotpick" onclick="pickPoly(' + (k + 1) + ')">' +
+  for (k = 0; k < PYR.length; k++){
+    s += '<g id="py_r' + k + '"' + (k < 4 ? ' class="slotpick" onclick="pickPoly(' + (k + 1) + ')"' : '') + '>' +
          '<g id="py_sm' + k + '"><ellipse cx="0" cy="' + (Y + 12) + '" rx="26" ry="10" fill="' + C_RIBO + '" fill-opacity=".55"/></g>' +
          '<g id="py_lg' + k + '"><ellipse id="py_le' + k + '" cx="0" cy="' + (Y - 16) + '" rx="31" ry="18" fill="#fff" fill-opacity=".7" stroke="' + C_RIBO + '" stroke-width="2"/>' +
-         txt('py_mk' + k, 0, Y - 10, POLY_MARK[k], 16, '#5A6270', 'middle', 800) + '</g></g>';
+         txt('py_mk' + k, 0, Y - 10, POLY_MARK[k] || '', 16, '#5A6270', 'middle', 800) + '</g></g>';
   }
   /* 개시코돈 · 종결코돈 · 번역되는 범위 — 라이보솜 위에 그려 늘 보이게 */
   [[PY.xs, 'AUG', '개시코돈'], [PY.xe, 'UAA', '종결코돈']].forEach(function(c){
@@ -1657,7 +1661,7 @@ var pyMounted = false;
 function pySet(id, a, v){ var el = document.getElementById(id); if (el) el.setAttribute(a, v); }
 function pyApply(){
   var L = pyLayout(PYA.t), k, j;
-  for (k = 0; k < 4; k++){
+  for (k = 0; k < PYR.length; k++){
     var R = L.r[k], pick = state.yPick === k + 1, right = pick && k + 1 === POLY_ANS;
     pySet('py_r' + k, 'transform', 'translate(' + R.x.toFixed(1) + ',' + R.dy.toFixed(1) + ')');
     pySet('py_r' + k, 'opacity', R.op.toFixed(3));
