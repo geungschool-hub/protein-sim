@@ -890,20 +890,22 @@ function riboSvg(pX, mode, slotTap){
   return s;
 }
 /* tRNA 한 개 — ★한 가닥이 접힌 모양(① 의 그림을 줄인 것 · 2026-10-14 교사 「하나의 가닥으로 이어지는 것을 명확히」).
-   5′ 끝(왼쪽 줄기)에서 내려와 왼쪽 고리 → 안티코돈 고리(상자) → 오른쪽 고리를 돌아 3′ 끝(오른쪽 줄기)으로 올라간다.
+   5′ 끝(오른쪽 줄기)에서 내려와 오른쪽 고리 → 안티코돈 고리(상자) → 왼쪽 고리를 돌아 3′ 끝(왼쪽 줄기)으로 올라간다.
+   ★가닥이 안티코돈 고리를 오른쪽→왼쪽(5′→3′)으로 지나야 왼쪽부터 3′→5′ 으로 적은 글자와 맞고, mRNA(5′ 왼쪽)와 역평행이 된다.
+     2026-10-19 교사가 수업 중 발견: 5′ 왼쪽 · 3′ 오른쪽으로 그렸더니 그림대로면 코돈과 평행이었다 — 다시 뒤집지 말 것.
    3′ 끝의 동그라미가 아미노산 결합 자리다. 안티코돈 세 글자는 코돈 바로 위에 마주 선다. 좌표는 cX 에 대해 선형이다. */
-var TRNA_3X = 7;                                   /* 3′ 줄기가 가운데에서 오른쪽으로 떨어진 거리 — 사슬이 여기에 붙는다 */
+var TRNA_3X = 7;                                   /* 3′ 줄기가 가운데에서 왼쪽으로 떨어진 거리 — 사슬이 여기에 붙는다 */
 function trnaBodySvg(cX, ac){
   var s = '', w3 = 3 * RG.pitch, m = cX + (w3 - 4) / 2, yB = RG.yM - 30, i, d = TRNA_3X;
   var P = function(x, y){ return (Math.round(x * 10) / 10) + ',' + y; };
   [152, 162, 172, 202, 211].forEach(function(y){
     s += '<line x1="' + (m - d + 2.5) + '" y1="' + y + '" x2="' + (m + d - 2.5) + '" y2="' + y + '" stroke="#9AA1AC" stroke-width="1.4" stroke-dasharray="2,2"/>';
   });
-  s += '<path d="M' + P(m - d, 148) + ' L' + P(m - d, 180) + ' L' + P(m - 20, 180) + ' C' + P(m - 42, 171) + ' ' + P(m - 42, 199) + ' ' + P(m - 20, 190) +
-       ' L' + P(m - d, 190) + ' L' + P(m - d, yB + 4) + ' L' + P(m + d, yB + 4) + ' L' + P(m + d, 190) + ' L' + P(m + 20, 190) +
-       ' C' + P(m + 42, 199) + ' ' + P(m + 42, 171) + ' ' + P(m + 20, 180) + ' L' + P(m + d, 180) + ' L' + P(m + d, 124) + '"' +
+  s += '<path d="M' + P(m + d, 148) + ' L' + P(m + d, 180) + ' L' + P(m + 20, 180) + ' C' + P(m + 42, 171) + ' ' + P(m + 42, 199) + ' ' + P(m + 20, 190) +
+       ' L' + P(m + d, 190) + ' L' + P(m + d, yB + 4) + ' L' + P(m - d, yB + 4) + ' L' + P(m - d, 190) + ' L' + P(m - 20, 190) +
+       ' C' + P(m - 42, 199) + ' ' + P(m - 42, 171) + ' ' + P(m - 20, 180) + ' L' + P(m - d, 180) + ' L' + P(m - d, 124) + '"' +
        ' fill="none" stroke="' + C_TRNA + '" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>';
-  s += '<circle cx="' + (m + d) + '" cy="120" r="4" fill="#fff" stroke="' + C_TRNA + '" stroke-width="2.5"/>';
+  s += '<circle cx="' + (m - d) + '" cy="120" r="4" fill="#fff" stroke="' + C_TRNA + '" stroke-width="2.5"/>';
   s += '<rect x="' + (cX + 2) + '" y="' + yB + '" width="' + (w3 - 8) + '" height="28" rx="9" fill="' + C_TRNA + '"/>';
   for (i = 0; i < 3; i++) s += txt('', cX + i * RG.pitch + RG.cw / 2, yB + 20, ac.charAt(i), 15, '#fff', 'middle', 800);
   return s;
@@ -911,7 +913,7 @@ function trnaBodySvg(cX, ac){
 /* 사슬의 j 번째(0 = 가장 먼저 붙은 것) 알약 자리 — 가장 최근 것이 3′ 끝 바로 위, 앞의 것은 위 오른쪽(A 자리 쪽)으로 비스듬히.
    ★왼쪽으로 늘어놓으면 앞 알약이 E 자리 tRNA 위에 와서 「빈 tRNA 가 아미노산을 달았다」로 읽힌다(실측) — 그래서 E 의 반대쪽으로 */
 function chainPt(cX, n, j){
-  var m = cX + (3 * RG.pitch - 4) / 2 + TRNA_3X;
+  var m = cX + (3 * RG.pitch - 4) / 2 - TRNA_3X;
   return { x:m + (n - 1 - j) * 40, y:RG.yM - 146 - (n - 1 - j) * 26 };
 }
 function pillSvg(x, y, nm, op){
@@ -1023,21 +1025,22 @@ function ptStageSvg(){
     if (k === 'E') s += txt('', x + 34, 140, 'E 자리', 13, C_RIBO_INK, 'middle', 800);
   });
   /* tRNA — ★한 가닥이 접힌 모양(교과서 그림 Ⅱ-6). 2026-10-14 교사: 「하나의 가닥으로 이어지는 것을 명확히」.
-     5′ 끝에서 출발한 한 줄이 왼쪽 고리 → 아래(안티코돈) 고리 → 오른쪽 고리를 돌아 3′ 끝으로 나온다.
+     5′ 끝(오른쪽)에서 출발한 한 줄이 오른쪽 고리 → 아래(안티코돈) 고리 → 왼쪽 고리를 돌아 3′ 끝(왼쪽)으로 나온다.
+     ★안티코돈 고리를 오른쪽→왼쪽(5′→3′)으로 지나야 mRNA(5′ 왼쪽)와 역평행이다(2026-10-19 교사 발견 · trnaBodySvg 참고).
      줄기의 점선은 접혀 마주 본 가닥 사이의 수소결합이다. 3′ 끝이 더 길고 그 끝에 아미노산이 결합한다. */
-  var TR = 'M588,72 L588,122 L566,122 C532,108 532,156 566,142 L588,142 L588,176 C552,230 648,230 612,176 ' +
-           'L612,142 L634,142 C668,156 668,108 634,122 L612,122 L612,60';
+  var TR = 'M612,72 L612,122 L634,122 C668,108 668,156 634,142 L612,142 L612,176 C648,230 552,230 588,176 ' +
+           'L588,142 L566,142 C532,156 532,108 566,122 L588,122 L588,60';
   [84, 98, 112, 154, 166].forEach(function(y){
     s += '<line x1="591" y1="' + y + '" x2="609" y2="' + y + '" stroke="#9AA1AC" stroke-width="1.6" stroke-dasharray="3,3"/>';
   });
   [572, 581, 619, 628].forEach(function(x){ s += '<line x1="' + x + '" y1="125" x2="' + x + '" y2="139" stroke="#9AA1AC" stroke-width="1.6" stroke-dasharray="3,3"/>'; });
   s += '<path d="' + TR + '" fill="none" stroke="' + C_TRNA + '" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>';
   s += txt('', 600, 238, 'U A C', 15, C_TRNA_INK, 'middle', 800);
-  s += txt('', 580, 76, '5′', 13, C_TRNA_INK, 'end', 800);
-  s += txt('', 622, 66, '3′', 13, C_TRNA_INK, 'start', 800);
-  s += '<circle cx="612" cy="52" r="8" fill="#fff" stroke="' + C_TRNA + '" stroke-width="3"/>';
+  s += txt('', 620, 76, '5′', 13, C_TRNA_INK, 'start', 800);
+  s += txt('', 578, 66, '3′', 13, C_TRNA_INK, 'end', 800);
+  s += '<circle cx="588" cy="52" r="8" fill="#fff" stroke="' + C_TRNA + '" stroke-width="3"/>';
   /* 빈 이름 칸 — 끌어 놓을 자리. 지시선으로 가리키는 곳을 잇는다 */
-  var LEAD = { a:[156,96,168,112], b:[156,226,180,224], c:[260,46,302,104], d:[370,46,380,104], e:[600,254,600,244], f:[612,46,612,44] };
+  var LEAD = { a:[156,96,168,112], b:[156,226,180,224], c:[260,46,302,104], d:[370,46,380,104], e:[600,254,600,244], f:[588,46,588,44] };
   Object.keys(PART_SLOTS).forEach(function(k){
     var p = PART_SLOTS[k], on = state.labels[k] === p.name, l = LEAD[k];
     s += '<line x1="' + l[0] + '" y1="' + l[1] + '" x2="' + l[2] + '" y2="' + l[3] + '" stroke="#8A93A0" stroke-width="1.4"/>';
